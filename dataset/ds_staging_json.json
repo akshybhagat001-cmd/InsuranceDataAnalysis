@@ -1,0 +1,35 @@
+{
+	"name": "ds_staging_json",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_insurance_devstorage",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"resource": {
+				"type": "string"
+			},
+			"fileName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().fileName",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@concat(dataset().resource,'/in/',formatDateTime(utcNow(),'yyyy'))",
+					"type": "Expression"
+				},
+				"fileSystem": "insurance"
+			}
+		},
+		"schema": {}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

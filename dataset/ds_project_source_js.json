@@ -1,0 +1,27 @@
+{
+	"name": "ds_project_source_js",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_project_source",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"resourceName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "HttpServerLocation",
+				"relativeUrl": {
+					"value": "@dataset().resourceName",
+					"type": "Expression"
+				}
+			}
+		},
+		"schema": {}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

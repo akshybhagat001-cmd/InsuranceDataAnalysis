@@ -1,0 +1,27 @@
+{
+	"name": "ds_source_json_api",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_insurance_api_source",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"Resource_Name": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "HttpServerLocation",
+				"relativeUrl": {
+					"value": "@dataset().Resource_Name",
+					"type": "Expression"
+				}
+			}
+		},
+		"schema": {}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

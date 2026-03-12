@@ -1,0 +1,9 @@
+{
+	"name": "devInsuranceDataADF",
+	"location": "westus2",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "efec332b-abe3-4adb-a020-720c938decc3",
+		"tenantId": "259d1670-9481-441a-a2ef-ba3355a7535f"
+	}
+}

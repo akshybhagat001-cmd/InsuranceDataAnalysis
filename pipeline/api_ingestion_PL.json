@@ -1,0 +1,132 @@
+{
+	"name": "api_ingestion_PL",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup Insurance Config Tbl",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select * from [insurance].[api_config_table] where Is_Active = 1",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_sqlDB_configuration",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Iterate API Resource",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Lookup Insurance Config Tbl",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Lookup Insurance Config Tbl').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Copy API Data",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "JsonSource",
+									"storeSettings": {
+										"type": "HttpReadSettings",
+										"requestMethod": "GET"
+									},
+									"formatSettings": {
+										"type": "JsonReadSettings"
+									}
+								},
+								"sink": {
+									"type": "JsonSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "JsonWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_source_json_api",
+									"type": "DatasetReference",
+									"parameters": {
+										"Resource_Name": {
+											"value": "@item().Resource_Name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_staging_json",
+									"type": "DatasetReference",
+									"parameters": {
+										"resource": {
+											"value": "@item().Object_Name",
+											"type": "Expression"
+										},
+										"fileName": {
+											"value": "@concat(\n  item().Object_Name,\n  '_',\n  formatDateTime(utcNow(),'yyyy-MM-dd_HH-mm-ss'),\n  '.json'\n)",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"masterPipelineRunId": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "insurance"
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-03-04T02:00:12Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

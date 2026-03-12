@@ -1,0 +1,209 @@
+{
+	"name": "pl_master",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup Pipeline Status Tbl",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "select is_last_run_completed from [insurance].[pipeline_run_status] where pipeline_name = 'API_Master_PL'",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_sqlDB_configuration",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Lookup Pipeline Status Tbl",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('Lookup Pipeline Status Tbl').output.firstRow['is_last_run_completed'],1)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Set MasterPipelineRunId",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "masterPipelineRunId",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Update is_last_run_completed Flag to 0",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "Set MasterPipelineRunId",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "LS_AzureSQLDB",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "Query",
+										"text": "UPDATE [insurance].[pipeline_run_status] set [is_last_run_completed] = 0 WHERE pipeline_name = 'API_Master_PL'"
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						},
+						{
+							"name": "Execute ingestion pl",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Update is_last_run_completed Flag to 0",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "api_ingestion_PL",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"masterPipelineRunId": {
+										"value": "@variables('masterPipelineRunId')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Execute Load_Json_To_Bronze_insurance NB",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "Execute ingestion pl",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/Users/me@akb90010gmail.onmicrosoft.com/Load_Json_To_Bronze_insurance",
+								"baseParameters": {
+									"masterPipelineRunID": {
+										"value": "@variables('masterPipelineRunId')",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "ls_adb_insurance",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Update is_last_run_completed Flag to 1",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "Execute Load_Json_To_Bronze_insurance NB",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "LS_AzureSQLDB",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "Query",
+										"text": "UPDATE [insurance].[pipeline_run_status] set [is_last_run_completed] = 1 WHERE pipeline_name = 'API_Master_PL'"
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"masterPipelineRunId": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "insurance"
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-03-04T02:00:12Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
